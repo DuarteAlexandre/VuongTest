@@ -1,14 +1,8 @@
-# GLM - MODELOS PARA DADOS DE CONTAGEM
-# Prof. Dr. Luiz Paulo Fávero
-
-#!/usr/bin/env python
-# coding: utf-8
-
-
-# In[ ]: Importação dos pacotes necessários
+# Luiz Paulo Fávero
+# Alexandre Duarte
+# Helder Prado Santos
 
 # !pip install statsmodels==0.14.0
-
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -20,29 +14,24 @@ import statsmodels.formula.api as smf
 import warnings
 warnings.filterwarnings('ignore')
 
-
-# In[ ]:
 ##############################################################################
-#                      REGRESSÃO PARA DADOS DE CONTAGEM                      #
-#                 CARREGAMENTO DA BASE DE DADOS 'corruption'                 #
+#                          REGRESSION FOR COUNT DATA                         #
+#                     LOADING THE 'corruption' DATABASE                      #
 ##############################################################################
-
-#Fisman, R.; Miguel, E. Corruption, Norms, and Legal Enforcement:
-#Evidence from Diplomatic Parking Tickets.
+#Fisman, R.; Miguel, E. Corruption, Norms, and Legal Enforcement: Evidence from Diplomatic Parking Tickets.
 #Journal of Political Economy, v. 15, n. 6, p. 1020-1048, 2007.
 #https://www.journals.uchicago.edu/doi/abs/10.1086/527495
 
 df_corruption = pd.read_csv('corruption.csv', delimiter=',')
 df_corruption
 
-#Caracterí­sticas das variáveis do dataset
+# Characteristics of dataset variables
 df_corruption.info()
 
-#Estatí­sticas univariadas
+# Univariate statistics
 df_corruption.describe()
 
-
-# In[ ]: Histograma da variável dependente 'violations'
+# Histogram of the dependent variable 'violations'
 
 plt.figure(figsize=(15,10))
 sns.histplot(data=df_corruption, x='violations', bins=20, color='darkorchid')
@@ -52,21 +41,13 @@ plt.tick_params(axis='x', labelsize=16)
 plt.tick_params(axis='y', labelsize=16)
 plt.show()
 
-
-# In[ ]: Diagnóstico preliminar para observação de eventual igualdade entre a média e a variância da variável dependente 'violations'
-
+# Preliminary diagnosis to observe possible equality between the mean and variance of the dependent variable 'violations'
 print(pd.DataFrame({'Média':[df_corruption.violations.mean()],
               'Variância':[df_corruption.violations.var()]}))
 
-
-# In[ ]: Comportamento das variáveis 'corruption' e 'violations' antes e
-#depois do início da vigência da lei
-
+# Behavior of the variables 'corruption' and 'violations' before and after the law came into force
 fig, axs = plt.subplots(ncols=2, figsize=(20,10), sharey=True)
-
-fig.suptitle('Diferença das violações de trânsito em NY antes e depois da vigência da lei',
-             fontsize = 20)
-
+fig.suptitle('Diferença das violações de trânsito em NY antes e depois da vigência da lei', fontsize = 20)
 post = ['no','yes']
 
 def label_point(x, y, val, ax):
@@ -88,25 +69,19 @@ for i, v in enumerate(post):
 
 plt.show()
 
-
-# In[ ]: Estimação do modelo Poisson
+# Poisson model estimation
 
 y = df_corruption['violations']
-
 x = df_corruption[['staff','post','corruption']]
 X = sm.add_constant(x)
 X = pd.get_dummies(X, columns=['post'], drop_first=True, dtype='int')
 
 from statsmodels.discrete.discrete_model import Poisson
-
 modelo_poisson = Poisson(endog=y, exog=X).fit()
-
 modelo_poisson.summary()
 
-
-# In[ ]:
 ##############################################################################
-#           TESTE DE SUPERDISPERSÃO DE CAMERON E TRIVEDI (1990)              #
+#               CAMERON AND TRIVEDI SUPERDISPERSION TEST (1990)              #
 ##############################################################################
 #CAMERON, A. C.; TRIVEDI, P. K. Regression-based tests for overdispersion in
 #the Poisson model. Journal of Econometrics, v. 46, n. 3, p. 347-364, 1990.
@@ -131,7 +106,7 @@ modelo_auxiliar.summary()
 
 # In[ ]:
 ##############################################################################
-#                   ESTIMAÇÃO DO MODELO BINOMIAL NEGATIVO                    #
+#                  ESTIMATION OF THE NEGATIVE BINOMIAL MODEL                 #
 ##############################################################################
 
 y = df_corruption['violations']
@@ -147,9 +122,9 @@ modelo_bneg = NegativeBinomial(endog=y, exog=X, loglike_method='nb2').fit()
 modelo_bneg.summary()
 
 
-# In[ ]: likelihood ratio test para comparação de LL's entre modelos
+# Likelihood ratio test para comparação de LL's entre modelos
 
-#Definição da função 'lrtest'
+# Definition of the 'lrtest' function
 def lrtest(modelos):
     modelo_1 = modelos[0]
     llk_1 = modelo_1.llnull
@@ -165,8 +140,7 @@ def lrtest(modelos):
 lrtest([modelo_poisson, modelo_bneg])
 
 
-# In[ ]: Gráfico para a comparação dos LL dos modelos Poisson e
-#binomial negativo
+# Chart for comparing the LL of the Poisson and negative binomial models
 
 # Definition of the dataframe with the models and their LL
 df_llf = pd.DataFrame({'modelo':['Poisson','NB'],
@@ -185,16 +159,12 @@ ax.set_xlabel("Log-Likehood", fontsize=20)
 ax.tick_params(axis='y', labelsize=16)
 ax.tick_params(axis='x', labelsize=16)
 
-
-# In[ ]: Adicionando os fitted values dos modelos estimados até o momento,
-#para fins de comparação
+# Adding the fitted values ​​of the models estimated so far, for comparison purposes
 
 df_corruption['fitted_poisson'] = np.exp(modelo_poisson.fittedvalues)
 df_corruption['fitted_bneg'] = np.exp(modelo_bneg.fittedvalues)
 
-
-# In[ ]: Fitted values dos modelos Poisson e binomial negativo, considerando,
-#para fins didáticos, apenas a variável preditora 'staff'
+# Fitted values ​​of the Poisson and negative binomial models, considering, for teaching purposes, only the predictor variable 'staff'
 
 plt.figure(figsize=(20,10))
 sns.relplot(data=df_corruption, x='staff', y='violations',
@@ -213,31 +183,30 @@ plt.show
 
 # In[ ]:
 ##############################################################################
-#              ESTIMAÇÃO DO MODELO ZERO-INFLATED POISSON (ZIP)               #
+#              ESTIMATION OF THE ZERO-INFLATED POISSON (ZIP) MODEL           #
 ##############################################################################
 
-#Definição da variável dependente
+# Definition of the dependent variable
 y = df_corruption['violations']
 
-#Definição das variáveis preditoras que entrarão no componente de contagem
+# Definition of the predictor variables that will enter the counting component
 x1 = df_corruption[['staff','post','corruption']]
 X1 = sm.add_constant(x1)
 X1 = pd.get_dummies(X1, columns=['post'], drop_first=True)
 
-#Definição das variáveis preditoras que entrarão no componente logit (inflate)
+# Definition of the predictor variables that will enter the logit (inflate) component
 x2 = df_corruption[['corruption']]
 X2 = sm.add_constant(x2)
 
-#Estimação do modelo ZIP
-#O argumento 'exog_infl' corresponde às variáveis que entram no componente
-#logit (inflate)
+# ZIP model estimation
+# The 'exog_infl' argument corresponds to the variables that enter the logit (inflate) component
 modelo_zip = sm.ZeroInflatedPoisson(y, X1, exog_infl=X2,
                                     inflation='logit').fit()
 
-#Parâmetros do modelo
+# Model parameters
 modelo_zip.summary()
 
-# In[]: DEFINIÇÃO DA FUNÇÃO 'vuong_test' PARA A ELABORAÇÃO DO TESTE DE VUONG:
+# DEFINITION OF THE 'vuong_test' FUNCTION FOR PREPARING THE VUONG TEST:
 
 def vuong_test(m1, m2):
     
@@ -298,12 +267,11 @@ def vuong_test(m1, m2):
     print(f"Vuong z-statistic: {v}")
     print(f"p-value: {pval}")
 
-# In[]: TESTE DE VUONG: POISSON X ZIP
+# VUONG TEST: POISSON X ZIP
 
 vuong_test(modelo_poisson, modelo_zip)
 
-# In[ ]: Gráfico para comparar os valores previstos x valores reais de
-#'violations' pelo modelo ZIP
+# Chart to compare predicted values ​​x actual values ​​of violations by the ZIP model
 
 zip_predictions = modelo_zip.predict(X1, exog_infl=X2)
 predicted_counts = np.round(zip_predictions)
@@ -320,10 +288,9 @@ plt.legend(['Predicted values with ZIP', 'Observed values from the Dataset'],
            fontsize=20)
 plt.show()
 
+# Likelihood ratio test for comparing LL's between models
 
-# In[ ]: likelihood ratio test para comparação de LL's entre modelos
-
-#Definição da função 'lrtest'
+# Definition of the 'lrtest' function
 def lrtest(modelos):
     modelo_1 = modelos[0]
     llk_1 = modelo_1.llnull
@@ -338,17 +305,15 @@ def lrtest(modelos):
 
 lrtest([modelo_poisson, modelo_zip])
 
-
-# In[ ]: Gráfico para a comparação dos LL dos modelos Poisson, BNeg e ZIP
-
-#Definição do dataframe com os modelos e respectivos LL
+# Chart for comparing the LL of the Poisson, BNeg and ZIP models
+# Definition of the dataframe with the models and respective LL
 df_llf = pd.DataFrame({'modelo':['Poisson','ZIP','BNeg'],
                       'loglik':[modelo_poisson.llf,
                                 modelo_zip.llf,
                                 modelo_bneg.llf]})
 df_llf
 
-#Plotagem propriamente dita
+# Plot
 fig, ax = plt.subplots(figsize=(15,10))
 
 c = ["#440154FF", "#453781FF", "#22A884FF"]
@@ -360,43 +325,38 @@ ax.set_xlabel("Log-Likehood", fontsize=20)
 ax.tick_params(axis='y', labelsize=16)
 ax.tick_params(axis='x', labelsize=16)
 
-
-# In[ ]:
 ##############################################################################
-#        ESTIMAÇÃO DO MODELO ZERO-INFLATED BINOMIAL NEGATIVO (ZINB)          #
+#        ESTIMATION OF THE ZERO-INFLATED NEGATIVE BINOMIAL (ZINB) MODEL      #
 ##############################################################################
 
-#Definição da variável dependente
+# Definition of the dependent variable
 y = df_corruption['violations']
 
-#Definição das variáveis preditoras que entrarão no componente de contagem
+# Definition of the predictor variables that will enter the counting component
 x1 = df_corruption[['staff','post','corruption']]
 X1 = sm.add_constant(x1)
 X1 = pd.get_dummies(X1, columns=['post'], drop_first=True)
 
-#Definição das variáveis preditoras que entrarão no componente logit (inflate)
+# Definition of the predictor variables that will enter the logit (inflate) component
 x2 = df_corruption[['corruption']]
 X2 = sm.add_constant(x2)
 
-#Estimação do modelo ZINB
+# ZINB model estimation
 
 from statsmodels.discrete.count_model import ZeroInflatedNegativeBinomialP
 
-#O argumento 'exog_infl' corresponde às variáveis que entram no componente
-#logit (inflate)
+# The 'exog_infl' argument corresponds to the variables that enter the logit (inflate) component
 modelo_zinb = ZeroInflatedNegativeBinomialP(y, X1, exog_infl=X2,
                                             inflation='logit').fit()
 
-#Parâmetros do modelo
+# Model parameters
 modelo_zinb.summary()
 
-
-# In[]: TESTE DE VUONG: BNEG X ZINB
+# VUONG TEST: BNEG X ZINB
 
 vuong_test(modelo_bneg,modelo_zinb)
 
-# In[ ]: Gráfico para comparar os valores previstos x valores reais de
-#'violations' pelo modelo ZINB
+# Chart to compare predicted values ​​x actual values ​​of violations' by the ZINB model
 
 zinb_predictions = modelo_zinb.predict(X1, exog_infl=X2)
 predicted_counts = np.round(zinb_predictions)
@@ -413,10 +373,8 @@ plt.legend(['Valores Previstos pelo ZINB', 'Valores Reais no Dataset'],
            fontsize=20)
 plt.show()
 
-
-# In[ ]: likelihood ratio test para comparação de LL's entre modelos
-
-#Definição da função 'lrtest'
+# Likelihood ratio test for comparing LL's between models
+# Definition of the 'lrtest' function
 def lrtest(modelos):
     modelo_1 = modelos[0]
     llk_1 = modelo_1.llnull
@@ -431,11 +389,8 @@ def lrtest(modelos):
 
 lrtest([modelo_bneg, modelo_zinb])
 
-
-# In[ ]: Gráfico para a comparação dos LL dos modelos Poisson, BNeg, ZIP e
-#ZINB
-
-#Definição do dataframe com os modelos e respectivos LL
+# Chart for comparing the LL of the Poisson, BNeg, ZIP and ZINB models
+# Definition of the dataframe with the models and respective LL
 df_llf = pd.DataFrame({'modelo':['Poisson','ZIP','NB','ZINB'],
                       'loglik':[modelo_poisson.llf,
                                 modelo_zip.llf,
@@ -443,7 +398,7 @@ df_llf = pd.DataFrame({'modelo':['Poisson','ZIP','NB','ZINB'],
                                 modelo_zinb.llf]})
 df_llf
 
-#Plotagem propriamente dita
+# Plot
 fig, ax = plt.subplots(figsize=(15,10))
 
 c = ["#440154FF", "#453781FF", "#22A884FF", "orange"]
@@ -455,18 +410,14 @@ ax.set_xlabel("Log-Likehood", fontsize=20)
 ax.tick_params(axis='y', labelsize=16)
 ax.tick_params(axis='x', labelsize=16)
 
-
-# In[ ]: Adicionando os fitted values dos modelos estimados para fins de
-#comparação
+# Adding the fitted values ​​of the estimated models for comparison purposes
 
 df_corruption['fitted_zip'] = modelo_zip.predict(X1, exog_infl=X2)
 df_corruption['fitted_zinb'] = modelo_zinb.predict(X1, exog_infl=X2)
 df_corruption
 
-
-# In[ ]: Fitted values dos modelos POISSON, BNEG, ZIP e ZINB, considerando,
-#para fins didáticos, a variável dependente 'violations' em função apenas da
-#variável preditora 'staff'
+# Fitted values ​​of the POISSON, BNEG, ZIP and ZINB models, considering, for teaching purposes,
+# the dependent variable 'violations' as a function of only the predictor variable 'staff'
 
 plt.figure(figsize=(20,10))
 sns.relplot(data=df_corruption, x='staff', y='violations',
@@ -488,4 +439,4 @@ plt.legend(['Observed', 'Poisson', 'Fit Poisson', 'CI Poisson',
            fontsize=14)
 plt.show
 
-################################## FIM ######################################
+################################## END ######################################
